@@ -10,7 +10,8 @@ from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import QThread, pyqtSignal, Qt, QMutex, QMutexLocker
 from PyQt5.QtGui import QFont, QImage, QPixmap
 from PyQt5.QtWidgets import *
-from PyQt5.uic.properties import QtGui
+from PyQt5 import QtGui
+# from PyQt5.uic.properties import QtGui
 
 from Entity.OperateMenu import OperateMenu
 from locateCode import locate_code
