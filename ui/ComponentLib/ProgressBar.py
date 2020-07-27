@@ -5,8 +5,6 @@ from PyQt5.QtWidgets import QApplication, QWidget, QDialog, QLabel, QLineEdit, Q
 from PyQt5.QtCore import Qt, QBasicTimer, QThread
 import sys
 
-from qtconsole.qt import QtCore
-
 
 class ProgressBar(QDialog):
     def __init__(self, fileIndex, filenum, max=100,parent=None):
