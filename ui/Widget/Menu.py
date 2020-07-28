@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import *
 
 from Entity.OperateMenu import OperateMenu
+from SystemInfo import SystemInfo
 from ui.ComponentLib.MyWidget import MyWidget
 
 class Menu(MyWidget):
@@ -10,15 +11,14 @@ class Menu(MyWidget):
         self.experimentExploer = QTreeWidget()
         self.experimentExploer.setColumnCount(1)
         self.experimentExploer.setHeaderHidden(True)
-        operateMenus = [['视频操作', '查看视频信息'], ['检测设置', '标注区域', '视频范围'], ['结果分析', '结果预览', '数据导出', '数据预览']]
-        for menusIndex in range(len(operateMenus)):
-            for menuIndex in range(len(operateMenus[menusIndex])):
+        for menusIndex in range(len(SystemInfo.operate_menus)):
+            for menuIndex in range(len(SystemInfo.operate_menus[menusIndex])):
                 if menuIndex == 0:
-                    operateMenus[menusIndex][menuIndex] = OperateMenu(operateMenus[menusIndex][menuIndex],
+                    SystemInfo.operate_menus[menusIndex][menuIndex] = OperateMenu(SystemInfo.operate_menus[menusIndex][menuIndex],
                                                                       self.experimentExploer)
                 else:
-                    operateMenus[menusIndex][menuIndex] = OperateMenu(operateMenus[menusIndex][menuIndex],
-                                                                      operateMenus[menusIndex][0].getQTreeWidgetItem())
+                    SystemInfo.operate_menus[menusIndex][menuIndex] = OperateMenu(SystemInfo.operate_menus[menusIndex][menuIndex],
+                                                                      SystemInfo.operate_menus[menusIndex][0].getQTreeWidgetItem())
         self.experimentExploer.expandAll()
         self.GroupBox.setLayout(self.set2FullVBoxLayout([self.experimentExploer]))
 

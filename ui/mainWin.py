@@ -30,8 +30,10 @@ class MainWindow(QMainWindow):
 
         self.setCentralWidget(mainWidget)
 
+        self.status = self.statusBar()
+
         self.setWidget = Set()
-        self.setWidget.chooseAreaBTN.clicked.connect(self.startPaint)
+        self.setWidget.paintScale.clicked.connect(self.startScalePaint)
 
         self.menuWidget = Menu()
         self.menuWidget.experimentExploer.clicked.connect(self.switchSet)
@@ -57,10 +59,14 @@ class MainWindow(QMainWindow):
         self.setContentsMargins(0, 0, 0, 0)
 
     def startPaint(self):
-        self.videoWidget.videoLabel.startPaint()
+        self.videoWidget.videoLabel.startAreaPaint()
         SystemInfo.detect_area_flag = True
         SystemInfo.video_label_size = [self.videoWidget.videoLabel.size().width(),self.videoWidget.videoLabel.size().height()]
         SystemInfo.video_label_hint_size = [self.videoWidget.videoLabel.sizeHint().width(),self.videoWidget.videoLabel.sizeHint().height()]
+
+    def startScalePaint(self):
+        self.videoWidget.videoLabel.startScalePaint()
+        SystemInfo.detect_scale_flag = True
 
     def updateVideoArea(self):
         QSize(1,2)
@@ -82,6 +88,11 @@ class MainWindow(QMainWindow):
         elif item.text(0) == "视频范围":
             self.setWidget.stackWidget.setCurrentWidget(self.setWidget.detectSet)
             self.setWidget.GroupBox.setTitle("视频范围")
+        elif item.text(0) == "标注区域":
+            self.startPaint()
+        elif item.text(0) == SystemInfo.operate_menus[1][3].getName():
+            self.startScalePaint()
+
 
     def setWidgetsStatus(self, status):
         self.menuWidget.GroupBox.setEnabled(status)
@@ -101,12 +112,15 @@ class MainWindow(QMainWindow):
             btn.setEnabled(status)
 
     def videoBack(self):
-        print("back")
+        pass
 
     def getDetectSet(self):
-        if SystemInfo.detect_area_flag:
-            self.updateVideoArea()
-            print(SystemInfo.detect_area)
+        try:
+            if SystemInfo.detect_area_flag:
+                self.updateVideoArea()
+                print(SystemInfo.detect_area)
+        except:
+            SystemInfo.log("System",'获取坐标失败！')
         # try:
         #     if SystemInfo.detect_area_flag:
         #         self.getVideoArea()
@@ -117,11 +131,9 @@ class MainWindow(QMainWindow):
 
     def detectStart(self):
         self.getDetectSet()
-        return False
         SystemInfo.detect_step = SystemInfo.detect_set_step
         total_step = (
                              SystemInfo.detect_set_end_time * SystemInfo.video_fps - SystemInfo.detect_set_start_time * SystemInfo.video_fps) / SystemInfo.detect_set_step
-        # print('[sys]Start detect,total:{}'.format(total_step))
         self.ProgressBar = ProgressBar("self.FileIndex", "self.VideoNum", SystemInfo.video_total_fps)
         for i in range(int(SystemInfo.detect_set_start_time * SystemInfo.video_fps),
                        int(SystemInfo.detect_set_end_time * SystemInfo.video_fps), int(SystemInfo.detect_set_step)):
@@ -135,34 +147,12 @@ class MainWindow(QMainWindow):
             SystemInfo.detect_all_number.extend(number)
             SystemInfo.detect_info['orientation'].append(orientation)
             SystemInfo.detect_info['tag_center'].append(tag_center)
-            # print("total step:{} i:{}".format(total_step, i))
             self.ProgressBar.setTipLable(
                 "总帧数：{}帧,当前帧数：{},步长：{}".format(int(SystemInfo.video_total_fps), i, SystemInfo.detect_set_step))
             self.ProgressBar.setValue(i)  # 更新进度条的值
             QApplication.processEvents()  # 实时显示
         self.ProgressBar.close()  # 记得关闭进度条
         self.showMessage("提示", "检测完成！")
-
-    # def track_video(video, start_time, end_time, step, tag_list=[]):
-    #     # det_info = defaultdict(list)
-    #     # all_number = []
-    #     # fps = video.get(cv2.CAP_PROP_FPS)
-    #     # n_frames = video.get(cv2.CAP_PROP_FRAME_COUNT)
-    #     for i in range(int(start_time * fps), int(end_time * fps), int(step)):
-    #         print(i)
-    #         det_info['det_frame'].append(i)
-    #         video.set(cv2.CAP_PROP_POS_FRAMES, i)
-    #         success, frame = video.read()
-    #         number, orientation, _, tag_center = locate_code(frame, threshMode=0, bradleyFilterSize=15,
-    #                                                          bradleyThresh=3, tagList=tag_list)
-    #         det_info['tag_label'].append(number)
-    #         all_number.extend(number)
-    #         det_info['orientation'].append(orientation)
-    #         det_info['tag_center'].append(tag_center)
-    #     if len(tag_list) == 0:
-    #         tag_list = list(set(all_number))
-    #     video.release()
-    #     return det_info, tag_list
 
     def videoOp(self):
         if SystemInfo.video_isPlay:
@@ -217,7 +207,7 @@ class MainWindow(QMainWindow):
                 print("Do not played")
             print("Open New Video")
         else:
-            print("[user]first open video")
+            SystemInfo.log('user',"First open video")
         self.projectWidget.selectComboBox.addItem(videoName)
         SystemInfo.video_name.append([videoName, videoType])
 
@@ -245,7 +235,7 @@ class MainWindow(QMainWindow):
         SystemInfo.video.set(cv2.CAP_PROP_POS_FRAMES, value)
         self.setImage(self.readVideo(SystemInfo.video))
         self.updateTime()
-        print("value change")
+
 
     def clearTime(self):
         SystemInfo.video_now_fps = SystemInfo.video_now_time = 0
@@ -275,6 +265,12 @@ class MainWindow(QMainWindow):
 
     def echo(self, msg):
         QMessageBox.information(self, "提示", msg, QMessageBox.Ok)
+
+    def getScaleReal(self):
+        i, okPressed = QInputDialog.getInt(self, "实际长度", "请输入实际长度，单位CM:", 10, 0, 1000, 1)
+        if okPressed:
+            SystemInfo.detect_scale_real = i
+
 
 
 class Thread(QThread):  # 采用线程来播放视频
@@ -323,7 +319,7 @@ class Thread(QThread):  # 采用线程来播放视频
                     rgbImage = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     convertToQtFormat = QtGui.QImage(rgbImage.data, rgbImage.shape[1], rgbImage.shape[0],
                                                      QImage.Format_RGB888)  # 在这里可以对每帧图像进行处理，
-                    print("[Sys]Play fps:{}".format(SystemInfo.video_now_fps))
+                    SystemInfo.log("System", "Play {} frame".format(SystemInfo.video_now_fps))
                     self.videoImage.emit(convertToQtFormat.scaled(640, 480, Qt.KeepAspectRatio))
 
                     # [!]add into cache
@@ -352,9 +348,13 @@ class Thread(QThread):  # 采用线程来播放视频
         self.start()
 
 
+
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     gui = MainWindow()
+    SystemInfo.main_view = gui
     gui.showMaximized()
     # gui.showFullScreen()
     sys.exit(app.exec_())
+    SystemInfo.log("System","Start")
+

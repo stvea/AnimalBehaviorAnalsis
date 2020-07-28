@@ -48,8 +48,13 @@ class Set(MyWidget):
 
     def detectSetUI(self):
         layout = QFormLayout()
-        self.chooseAreaBTN = QPushButton()
-        self.chooseAreaBTN.setText("绘制检测区域")
+        self.paintScale = QPushButton()
+        self.paintScale.setText("绘制检测区域")
+
+        self.realScale = QSpinBox()
+        self.realScale.setMinimum(1)
+        self.realScale.setMaximum(100000)
+
         self.startTimeEdit = QTimeEdit()
         self.startTimeEdit.setDisplayFormat("HH:mm:ss")
         self.startTimeEdit.setTime(QtCore.QTime(0, 0, 0))
@@ -62,7 +67,9 @@ class Set(MyWidget):
 
         self.step = QSpinBox()
         self.step.setMinimum(1)
-        layout.addRow(QLabel("绘制检测区域"),self.chooseAreaBTN)
+
+        # layout.addRow(QLabel("绘制比例尺"),self.paintScale)
+        # layout.addRow(QLabel("比例尺实际长度(单位:CM)"),self.realScale)
         layout.addRow(QLabel("开始时间"), self.startTimeEdit)
         layout.addRow(QLabel("结束时间"), self.endTimeEdit)
         layout.addRow(QLabel("步长"), self.step)
