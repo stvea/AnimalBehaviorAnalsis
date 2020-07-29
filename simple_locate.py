@@ -8,8 +8,8 @@ from collections import defaultdict
 
 
 # area = [x1, y1, x2, y2]
-def simple_locate(im, filter_size=23, filter_threshold=1, tag_list=[], track_mode=0, area=None):
-    if area is not None:
+def simple_locate(im, filter_size=23, filter_threshold=1, tag_list=[], track_mode=0, area=[], visual=False):
+    if area:
         assert len(area) == 4, 'area must have four positional parameters'
         im = im[area[1]:area[3], area[0]:area[2]]
     gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
@@ -85,18 +85,22 @@ def simple_locate(im, filter_size=23, filter_threshold=1, tag_list=[], track_mod
             else:
                 unrecognized_corners['corner'].append(corner)
                 unrecognized_corners['code'].append(code)
-    # cv2.namedWindow('bumblebee', 0)
-    # for i in range(len(numbers)):
-    #     cv2.putText(im, str(numbers[i]), tuple(np.int32(tag_center[i])), fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-    #                 fontScale=2, color=(0, 0, 255), thickness=3)
-    # cv2.imshow('bumblebee', im)
-    # cv2.waitKey(0)
-    if area is not None:
+    if area:
         for corner in corners:
             corner += area[:2]
         tag_center = [x + area[:2] for x in tag_center]
         for unrecognized in unrecognized_corners:
             unrecognized += area[:2]
+    if visual:
+        cv2.namedWindow('bumblebee', 0)
+        for i, number in enumerate(numbers):
+            for corner in corners:
+                for point in corner:
+                    cv2.circle(im, tuple(np.int32(point)), radius=5, color=(0, 255, 0), thickness=-1)
+            cv2.putText(im, text=str(number), org=tuple(np.int32(tag_center[i])), fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                        fontScale=2, color=(255, 0, 0), thickness=3)
+        cv2.imshow('bumblebee', im)
+        cv2.waitKey(0)
     return numbers, orientations, corners, tag_center, unrecognized_corners
 
 

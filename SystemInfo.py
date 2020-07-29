@@ -36,7 +36,7 @@ class SystemInfo:
 
     detect_set_start_time = 0
     detect_set_end_time = 0
-    detect_set_step = 20
+    detect_set_step = 1
     detect_step = 1
     detect_info = defaultdict(list)
     detect_all_number = []

@@ -1,4 +1,6 @@
 import sys
+import os
+import pickle
 import numpy as np
 
 import time
@@ -17,6 +19,7 @@ from ui.Widget.Project import Project
 from ui.Widget.Set import Set
 from ui.Widget.Video import Video
 from ui.Widget.VideoOperate import VideoOperate
+from sort import Sort, get_file_info
 
 
 class MainWindow(QMainWindow):
@@ -78,6 +81,7 @@ class MainWindow(QMainWindow):
             return False
         ratio = SystemInfo.video_size[0]/SystemInfo.video_label_hint_size[0]
         SystemInfo.detect_area = [ratio*(SystemInfo.detect_area[0]-x_len),ratio*(SystemInfo.detect_area[1]-y_len),ratio*(SystemInfo.detect_area[2]-x_len),ratio*(SystemInfo.detect_area[3]-y_len)]
+        print(SystemInfo.detect_area)
 
     def switchSet(self, index):
         item = self.menuWidget.experimentExploer.currentItem()
@@ -130,27 +134,41 @@ class MainWindow(QMainWindow):
         SystemInfo.detect_set_step = int(self.setWidget.step.text())
 
     def detectStart(self):
+        if SystemInfo.video_opened_url is None:
+            self.showMessage("提示", "还没选择视频")
+            return
+        dir_name, file_name = os.path.split(SystemInfo.video_opened_url)
+        info_file = os.path.join(dir_name, os.path.splitext(file_name)[0] + '_detection.pkl')
+        # if os.path.exists(info_file):
+        #     self.showMessage('提示', '该视频已被检测')
+        #     return
         self.getDetectSet()
         SystemInfo.detect_step = SystemInfo.detect_set_step
         total_step = (
                              SystemInfo.detect_set_end_time * SystemInfo.video_fps - SystemInfo.detect_set_start_time * SystemInfo.video_fps) / SystemInfo.detect_set_step
         self.ProgressBar = ProgressBar("self.FileIndex", "self.VideoNum", SystemInfo.video_total_fps)
+        mul_trackers = Sort(step=SystemInfo.detect_step)
         for i in range(int(SystemInfo.detect_set_start_time * SystemInfo.video_fps),
                        int(SystemInfo.detect_set_end_time * SystemInfo.video_fps), int(SystemInfo.detect_set_step)):
             SystemInfo.detect_info['detect_frame'].append(i)
             SystemInfo.video.set(cv2.CAP_PROP_POS_FRAMES, i)
             success, frame = SystemInfo.video.read()
-            tag_list = []
-            number, orientation, _, tag_center = locate_code(frame, threshMode=0, bradleyFilterSize=15,
-                                                             bradleyThresh=3, tagList=tag_list)
-            SystemInfo.detect_info['tag_label'].append(number)
-            SystemInfo.detect_all_number.extend(number)
-            SystemInfo.detect_info['orientation'].append(orientation)
-            SystemInfo.detect_info['tag_center'].append(tag_center)
+            # tag_list = []
+            # number, orientation, _, tag_center, _ = locate_code(frame, threshMode=0, bradleyFilterSize=15,
+            #                                                     bradleyThresh=3, tagList=tag_list)
+            # SystemInfo.detect_info['tag_label'].append(number)
+            # SystemInfo.detect_all_number.extend(number)
+            # SystemInfo.detect_info['orientation'].append(orientation)
+            # SystemInfo.detect_info['tag_center'].append(tag_center)
+            if success:
+                mul_trackers.update(frame)
             self.ProgressBar.setTipLable(
                 "总帧数：{}帧,当前帧数：{},步长：{}".format(int(SystemInfo.video_total_fps), i, SystemInfo.detect_set_step))
             self.ProgressBar.setValue(i)  # 更新进度条的值
             QApplication.processEvents()  # 实时显示
+        with open(info_file, 'wb') as f:
+            pickle.dump(mul_trackers, f)
+        get_file_info(info_file, SystemInfo)
         self.ProgressBar.close()  # 记得关闭进度条
         self.showMessage("提示", "检测完成！")
 
@@ -295,6 +313,7 @@ class Thread(QThread):  # 采用线程来播放视频
                 return
 
             if SystemInfo.video_mode:
+                max_detect_pos = max(SystemInfo.detect_info['detect_frame'])
                 # when comes to error value emit a signal to show message
                 # self.warnSignal.emit("123","890")
                 # return
@@ -302,13 +321,15 @@ class Thread(QThread):  # 采用线程来播放视频
                 # SystemInfos.video.set(cv2.CAP_PROP_POS_FRAMES, v)
                 success, frame = SystemInfo.video.read()
                 if success:
-                    detect_index = int(SystemInfo.video_now_fps / SystemInfo.detect_step) * SystemInfo.detect_step
-                    index = SystemInfo.detect_info['detect_frame'].index(detect_index)
                     rgbImage = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    for i in range(0, len(SystemInfo.detect_info['tag_label'][index])):
-                        center = np.round(SystemInfo.detect_info['tag_center'][index][i]).astype(int)
-                        cv2.putText(rgbImage, str(SystemInfo.detect_info['tag_label'][index][i]),
-                                    (center[1], center[0]), cv2.FONT_HERSHEY_COMPLEX, 2.0, (100, 200, 200), 5)
+                    detect_index = min(int(SystemInfo.video_now_fps / SystemInfo.detect_step) * SystemInfo.detect_step,
+                                       max_detect_pos)
+                    if detect_index in SystemInfo.detect_info['detect_frame']:
+                        index = SystemInfo.detect_info['detect_frame'].index(detect_index)
+                        for i in range(0, len(SystemInfo.detect_info['tag_label'][index])):
+                            center = np.round(SystemInfo.detect_info['tag_center'][index][i]).astype(int)
+                            cv2.putText(rgbImage, str(SystemInfo.detect_info['tag_label'][index][i]),
+                                        (center[0], center[1]), cv2.FONT_HERSHEY_COMPLEX, 2.0, (100, 200, 200), 5)
                     convertToQtFormat = QtGui.QImage(rgbImage.data, rgbImage.shape[1], rgbImage.shape[0],
                                                      QImage.Format_RGB888)  # 在这里可以对每帧图像进行处理，
                     self.videoImage.emit(convertToQtFormat.scaled(640, 480, Qt.KeepAspectRatio))
@@ -346,7 +367,6 @@ class Thread(QThread):  # 采用线程来播放视频
     def resume(self):
         SystemInfo.video_isPlay = True
         self.start()
-
 
 
 if __name__ == '__main__':
