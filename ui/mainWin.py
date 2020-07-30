@@ -6,6 +6,7 @@ import numpy as np
 import time
 
 import cv2
+import configparser
 from PyQt5.QtCore import QThread, pyqtSignal, Qt, QMutex, QMutexLocker, QSize
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtWidgets import *
@@ -58,6 +59,7 @@ class MainWindow(QMainWindow):
         grid.addWidget(self.setWidget.GroupBox, 8, 5, 2, 15)
         self.resize(1920, 1080)
         self.setContentsMargins(0, 0, 0, 0)
+        SystemInfo.get('system.ini')
         self.setWidgetsStatus(False)
 
     def updateVideoArea(self):
@@ -108,16 +110,20 @@ class MainWindow(QMainWindow):
         info_dir = os.path.join(dir_name, os.path.splitext(file_name)[0])
         if not os.path.exists(info_dir):
             os.makedirs(info_dir)
-        info_file = os.path.join(dir_name, os.path.splitext(file_name)[0], 'detection.pkl')
-        if os.path.exists(info_file):
-            self.showMessage('提示', '该视频已被检测')
-            return
         self.getDetectSet()
         SystemInfo.detect_step = SystemInfo.detect_set_step
-        print(SystemInfo.detect_set_start_time)
-        return
-        # config_dir = os.path.join(info_dir, 'detect_config.ini')
-        # SystemInfo.write(config_dir)
+        config_file = os.path.join(info_dir, 'detect_config.ini')
+        config = configparser.ConfigParser()
+        if not os.path.exists(config_file):
+            open(config_file, 'w').close()
+            # os.mknod(config_file)
+        config.read(config_file)
+        section = str(SystemInfo.detect_set_start_time) + '-' + str(SystemInfo.detect_set_end_time) + '__' + \
+                  str(SystemInfo.detect_step)
+        if section in config.sections():
+            self.showMessage('提示', '相同的设置已经检测')
+            return
+        info_file = os.path.join(info_dir, section + '.pkl')
         total_step = (SystemInfo.detect_set_end_time * SystemInfo.video_fps -
                       SystemInfo.detect_set_start_time * SystemInfo.video_fps) / SystemInfo.detect_set_step
         self.ProgressBar = ProgressBar("self.FileIndex", "self.VideoNum", SystemInfo.video_total_fps)
@@ -143,6 +149,7 @@ class MainWindow(QMainWindow):
         with open(info_file, 'wb') as f:
             pickle.dump(mul_trackers, f)
         get_detect_info(info_file, SystemInfo)
+        SystemInfo.write(config, section, config_file)
         self.ProgressBar.close()  # 记得关闭进度条
         self.showMessage("提示", "检测完成！")
         SystemInfo.video_is_detect = True
@@ -187,10 +194,11 @@ class MainWindow(QMainWindow):
         self.videoWidget.videoLabel.setPixmap(QPixmap.fromImage(image))
 
     def openVideo(self):
-
+        if not os.path.exists(SystemInfo.default_dir):
+            SystemInfo.default_dir = ''
         videoName, videoType = QFileDialog.getOpenFileName(self,
                                                            "打开视频",
-                                                           "",
+                                                           SystemInfo.default_dir,
                                                            # " *.jpg;;*.png;;*.jpeg;;*.bmp")
                                                            " *.mp4;;*.avi;;All Files (*)")
         if videoName == "" or not videoName:
@@ -268,7 +276,8 @@ class MainWindow(QMainWindow):
             rgbImage = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             convertToQtFormat = QtGui.QImage(rgbImage.data, rgbImage.shape[1], rgbImage.shape[0],
                                              QImage.Format_RGB888)  # 在这里可以对每帧图像进行处理，
-            p = convertToQtFormat.scaled(SystemInfo.video_label_hint_size[0], SystemInfo.video_label_hint_size[1], Qt.KeepAspectRatio)
+            p = convertToQtFormat.scaled(SystemInfo.video_label_hint_size[0], SystemInfo.video_label_hint_size[1],
+                                         Qt.KeepAspectRatio)
         return p
 
     def echo(self, msg):
