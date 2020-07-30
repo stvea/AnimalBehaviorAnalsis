@@ -105,14 +105,21 @@ class MainWindow(QMainWindow):
             self.showMessage("提示", "还没选择视频")
             return
         dir_name, file_name = os.path.split(SystemInfo.video_opened_url)
-        info_file = os.path.join(dir_name, os.path.splitext(file_name)[0] + '_detection.pkl')
-        # if os.path.exists(info_file):
-        #     self.showMessage('提示', '该视频已被检测')
-        #     return
+        info_dir = os.path.join(dir_name, os.path.splitext(file_name)[0])
+        if not os.path.exists(info_dir):
+            os.makedirs(info_dir)
+        info_file = os.path.join(dir_name, os.path.splitext(file_name)[0], 'detection.pkl')
+        if os.path.exists(info_file):
+            self.showMessage('提示', '该视频已被检测')
+            return
         self.getDetectSet()
         SystemInfo.detect_step = SystemInfo.detect_set_step
-        total_step = (
-                             SystemInfo.detect_set_end_time * SystemInfo.video_fps - SystemInfo.detect_set_start_time * SystemInfo.video_fps) / SystemInfo.detect_set_step
+        print(SystemInfo.detect_set_start_time)
+        return
+        # config_dir = os.path.join(info_dir, 'detect_config.ini')
+        # SystemInfo.write(config_dir)
+        total_step = (SystemInfo.detect_set_end_time * SystemInfo.video_fps -
+                      SystemInfo.detect_set_start_time * SystemInfo.video_fps) / SystemInfo.detect_set_step
         self.ProgressBar = ProgressBar("self.FileIndex", "self.VideoNum", SystemInfo.video_total_fps)
         mul_trackers = Sort(step=SystemInfo.detect_step)
         for i in range(int(SystemInfo.detect_set_start_time * SystemInfo.video_fps),
