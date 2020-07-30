@@ -59,7 +59,9 @@ class MainWindow(QMainWindow):
         grid.addWidget(self.setWidget.GroupBox, 8, 5, 2, 15)
         self.resize(1920, 1080)
         self.setContentsMargins(0, 0, 0, 0)
-        SystemInfo.get('system.ini')
+        system_config_file = os.path.abspath('../system.ini')
+        print(os.path.exists(system_config_file))
+        SystemInfo.get(system_config_file)
         self.setWidgetsStatus(False)
 
     def updateVideoArea(self):

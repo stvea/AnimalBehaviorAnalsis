@@ -79,7 +79,6 @@ class SystemInfo:
             config.write(f)
 
     def get(system_config_file):
-        print(os.path.exists(system_config_file))
         if os.path.exists(system_config_file):
             config = configparser.ConfigParser()
             config.read(system_config_file)
