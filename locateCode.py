@@ -5,9 +5,11 @@ import warnings
 from skimage import measure
 from sklearn.cluster import KMeans
 import cmath
-from tool import point2line, direction_vector, line_intersection
+import os
+from tool import point2line, direction_vector, line_intersection, fit_square
 import operator
-from code25 import checkOrs25, code_match
+from code25 import checkOrs25
+from tool import code_match
 
 
 # def circular_correlate(x, y):
@@ -18,8 +20,8 @@ from code25 import checkOrs25, code_match
 
 def locate_code(im, **info):
     tag_length = 5
-    config = {'vis': 1, 'colMode': 0, 'sizeThresh': 150, 'threshMode': 2, 'bradleyFilterSize': 15,
-              'bradleyThreshold': 3, 'thresh': -1, 'robustTrack': 0, 'tagList': []}
+    config = {'vis': 1, 'colMode': 0, 'sizeThresh': [500, 3000], 'threshMode': 0, 'bradleyFilterSize': 15,
+              'bradleyThreshold': 3, 'thresh': None, 'robustTrack': 0, 'tagList': []}
     for x in config:
         if info.get(x) is not None:
             config[x] = info.get(x)
@@ -36,50 +38,41 @@ def locate_code(im, **info):
         gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
     else:
         gray = im
-    if thresh > 0:
+    if thresh is not None:
         _, BW = cv2.threshold(gray, thresh, 1, cv2.THRESH_BINARY)
     else:
         if threshMode == 0:
             BW = cv2.adaptiveThreshold(gray, 1, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, smP, brT)
         elif threshMode == 1:
-            blur = cv2.medianBlur(gray, 5)
-            BW = cv2.adaptiveThreshold(blur, 1, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, smP, brT)
+            BW = cv2.adaptiveThreshold(gray, 1, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, smP, brT)
         elif threshMode == 2:
-            # blur = cv2.GaussianBlur(gray, (5, 5), 0)
             ret, BW = cv2.threshold(gray, 0, 1, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
             # print(np.mean(BW))
             # print(ret/255)
         elif threshMode == 3:
             blur = cv2.medianBlur(gray, 5)
-            _, BW = cv2.threshold(blur, thresh, 255, cv2.THRESH_BINARY)
+            _, BW = cv2.threshold(blur, thresh, 1, cv2.THRESH_BINARY)
         else:
             print('threshMode不能为', threshMode)
             return
-    sizeThreshDef = [150, 3000]
-    if type(sizeThresh) == int:
-        sizeThreshDef[0] = sizeThresh
-    else:
-        sizeThreshDef = sizeThresh
     label, num = measure.label(BW, return_num=True, connectivity=2)
     properties = measure.regionprops(label)
-    bbox, filledimage = [], []
+    bbox, image = [], []
     for propertie in properties:
-        if propertie.area in range(sizeThreshDef[0], sizeThreshDef[1]):
+        if propertie.area in range(sizeThresh[0], sizeThresh[1]):
             bbox.append(propertie.bbox)
-            # print(propertie.bbox)
-            filledimage.append(propertie.filled_image)
-            # print(propertie.filled_image.shape)
-            # print(propertie.filled_image)
+            image.append(propertie.image)
     if len(bbox) == 0:
         print('No sufficiently large what regions detected - try changing threshMode for binary '
               'image or tag size (sizeThresh)')
         return [], [], []
     corners = []
+    unrecognized_corners = []
     for i in range(len(bbox)):
         # print(bbox[i])
         # cv2.rectangle(im, (bbox[i][1], bbox[i][0]), (bbox[i][3], bbox[i][2]), (0, 0, 255), 2)
         try:
-            isq, corner = fitquad(bbox[i], np.array(filledimage[i], np.uint8))
+            isq, corner = fitquad(bbox[i], np.array(image[i], np.uint8))
         except Exception:
             continue
         if isq:
@@ -101,12 +94,12 @@ def locate_code(im, **info):
     values = []
     tag_center = []
     for i in range(len(PerspectiveImg)):
-        # print(corners[i][:, ::-1])
         try:
             # value = BW[np.array(PerspectiveImg[i][:, 1], int), np.array(PerspectiveImg[i][:, 0], int)]
             value = np.zeros(PerspectiveImg[i].shape[0])
             for j in range(PerspectiveImg[i].shape[0]):
                 y, x = np.array(PerspectiveImg[i][j]+0.5, int)
+                # value[j] = int(np.round(BW[x, y]))
                 value[j] = int(np.round(np.mean(BW[x-1:x+2, y-1:y+2])))
             values.append(value)
         except Exception:
@@ -121,6 +114,7 @@ def locate_code(im, **info):
             if pass_bin:
                 if len(validTagList):
                     if number not in validTagList:
+                        unrecognized_corners.append(corners[i])
                         corners.pop(i)
                         continue
                 numbers.append(number)
@@ -131,6 +125,7 @@ def locate_code(im, **info):
                 orientation_polar = cmath.polar(orientation_coordinate[0] + orientation_coordinate[1]*1j)
                 orientations.append(orientation_polar[1])
             else:
+                unrecognized_corners.append(corners[i])
                 corners.pop(i)
     elif trackMode == 1:
         if len(validTagList) == 0:
@@ -165,25 +160,24 @@ def locate_code(im, **info):
     #     elif colMode == 2:
     #         cv2.imshow('image', im)
     #     cv2.waitKey(0)
-    return numbers, orientations, corners, tag_center
+    return numbers, orientations, corners, tag_center, unrecognized_corners
 
 
 def fitquad(bbox, mask):
     isQuad = False
     corner = np.zeros((4, 2))
     cls = 4
-    # print(mask.shape)
     # print(mask)
-    mask = np.pad(mask, ((3, 3), (3, 3)), mode='constant')
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))  # 返回指定形状和尺寸的结构元素
-    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
-    mask = mask[3:-3, 3:-3]
+    # mask = np.pad(mask, ((3, 3), (3, 3)), mode='constant')
+    # kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))  # 返回指定形状和尺寸的结构元素
+    # mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+    # mask = mask[3:-3, 3:-3]
     contours, hierarchy = cv2.findContours(mask.transpose(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     contour = np.squeeze(contours[0])
     # print(contour.shape)
     # print(contour)
-    kernelSize = np.floor(np.min(mask.shape) / 3).astype(int)
-    kernel = np.convolve(np.array([-1, 0, 1], float) / 2,
+    kernelSize = np.floor(np.min(mask.shape) / 3).astype(np.int32)
+    kernel = np.convolve(np.array([-1, 0, 1], np.float32) / 2,
                          np.squeeze(cv2.getGaussianKernel(kernelSize, kernelSize / 6)))[:, None]
     # print(kernel)
     gradients = signal.convolve2d(contour, kernel, boundary='wrap', mode='same')  # 高斯第一平滑导数
@@ -192,8 +186,7 @@ def fitquad(bbox, mask):
     # seedIdx1 = np.floor(np.linspace(0, gradients.shape[0], 5))
     # seedIdx2 = seedIdx1 + np.floor((seedIdx1[1]-seedIdx1[0])/2)
     # seedIdx2 = np.array(seedIdx2, np.int)
-    kmean = KMeans(n_clusters=cls, max_iter=100)
-    kmean.fit(gradients)
+    kmean = KMeans(n_clusters=cls, random_state=0).fit(gradients)
     label = kmean.labels_
     points = []
     for i in range(cls):
@@ -209,11 +202,11 @@ def fitquad(bbox, mask):
             return isQuad, corner
         line[i] = np.polyfit(points[i][:, 0]+rcond, points[i][:, 1]+rcond, deg=1)
     # print(line)
-    maxIter = 6
+    maxIter = 160
     step = 0
     isConverged = False
     isDegenerate = False
-    minPtsPrClstr = gradients.shape[0] / 4 * 0.5
+    minPtsPrClstr = gradients.shape[0] / 4 * 0.25
     while step < maxIter and not isConverged and not isDegenerate:
         distances = []
         for i in range(cls):
@@ -237,12 +230,13 @@ def fitquad(bbox, mask):
                 line[i] = np.polyfit(points[i][:, 0]+rcond, points[i][:, 1]+rcond, deg=1)
         step += 1
     if not isConverged or isDegenerate:
-        return isQuad, corner
+        return isQuad, corner+bbox[0:2]
     vector = direction_vector(line)
     product = np.sum(vector[0] * vector[1:4], axis=1)
     ind = np.argsort(product)
-    if product[ind[2]] < 0.85 and product[ind[1]] - product[ind[0]] > 0.15:
-        return isQuad, corner
+    product = product[ind]
+    if product[2] < 0.9 or abs(product[0]) > 0.15 or abs(product[1]) > 0.15:
+        return isQuad, corner+bbox[0:2]
     corner[0] = line_intersection(line[0], line[ind[0] + 1])
     corner[1] = line_intersection(line[ind[0] + 1], line[ind[2] + 1])
     corner[2] = line_intersection(line[ind[1] + 1], line[ind[2] + 1])
@@ -256,26 +250,31 @@ def fitquad(bbox, mask):
         r[i] = a[0]
         theta[i] = b[0] if b[0] < 3.1415 else b[0] - 3.1415 * 2
     if any(r > np.sqrt(sum(np.array(mask.shape) ** 2)) / 2 * 1.1):
-        return isQuad, corner
-    # print(theta)
+        return isQuad, corner+bbox[0:2]
     ind = np.argsort(theta)
     corner = corner[ind]
-    # print(corner)
     corner = corner + bbox[0:2]
     isQuad = True
     return isQuad, corner
 
 
 if __name__ == '__main__':
-    im = cv2.imread('picture/000720.png')
-    number, orientation, corners, tag_center = locate_code(im, threshMode=0, bradleyFilterSize=15, bradleyThresh=3)
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    for i in range(len(corners)):
-        for j in range(4):
-            cv2.circle(im, tuple(np.array(corners[i][j], int)[::-1]), 6, (0, 255, 0), -1)
-        center = np.round(tag_center[i]).astype(int)
-        cv2.putText(im, str(number[i]), (center[1], center[0]), font, 3, (255, 0, 0), 4)
-    cv2.namedWindow('image', 0)
-    cv2.imshow('image', im)
+    filename = 'picture/000090.png'
+    im = cv2.imread(filename)
+    number, orientation, corners, tag_center, unrecognized_corners = locate_code(im, threshMode=1,
+                                                                                 bradleyFilterSize=23,
+                                                                                 bradleyThreshold=-1)
+    for corner in corners:
+        for point in corner:
+            cv2.circle(im, tuple(np.int32(np.flip(point))), radius=5, color=(0, 255, 0), thickness=-1)
+    for corner in unrecognized_corners:
+        for point in corner:
+            cv2.circle(im, tuple(np.int32(np.flip(point))), radius=5, color=(0, 255, 0), thickness=-1)
+    for i, center in enumerate(tag_center):
+        if number[i] > 0:
+            cv2.putText(im, str(number[i]), tuple(np.int32(np.flip(center))), cv2.FONT_HERSHEY_SIMPLEX, 2,
+                        color=(0, 0, 255), thickness=3)
+    cv2.namedWindow('bumblebee', 0)
+    cv2.imshow('bumblebee', im)
     cv2.waitKey(0)
-    # print(number, orientation, corners)
+    cv2.destroyAllWindows()

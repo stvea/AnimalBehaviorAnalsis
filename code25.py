@@ -76,25 +76,16 @@ def number_to_code(number):
     return code
 
 
-def code_match(raw_code, numbers):
-    codes = np.zeros((len(numbers), 5, 5))
-    for i in range(len(numbers)):
-        codes[i] = number_to_code(numbers[i])
-    match = np.zeros((4, len(numbers)))
-    for i in range(4):
-        new_code = np.rot90(raw_code, i+1)
-        match[i] = np.sum(new_code == codes, axis=(1, 2))/np.prod(raw_code.shape)
-    ind = divmod(np.argmax(match), match.shape[1])
-    return np.max(match), numbers[ind[0]], ind[1]
-
-
 if __name__ == '__main__':
     # im = np.array([[0, 0, 0, 0, 1], [0, 0, 1, 1, 1], [0, 0, 0, 1, 1], [0, 1, 0, 1, 1], [0, 0, 0, 1, 0]])
     # pas = check_code25(im.transpose())
     # pass_bin, number, _, _, _ = checkOrs25(im.transpose())
     # print(pass_bin, number)
-    code = number_to_code(72)
-    # print(checkOrs25(code))
-    pass_bin, number = code_match(code.transpose(0, 1), [72])
-    print(pass_bin, number)
+    code = number_to_code(3)
+    for i in range(4):
+        new_code = np.rot90(code, i)
+        new = new_code.transpose()
+        pas = check_code25(new)
+        print(new_code, pas)
+
 
