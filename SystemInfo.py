@@ -1,5 +1,7 @@
 from collections import defaultdict
 import time
+import os
+import configparser
 
 class SystemInfo:
     video_name = []
@@ -51,3 +53,30 @@ class SystemInfo:
     def log(TAG,msg):
         SystemInfo.main_view.status.showMessage('"[{}] [{}] {}".format(time.strftime("%Y-%m-%d %H:%M:%S",time.localtime(time.time())),TAG,msg)',1000)
         print("[{}] [{}] {}".format(time.strftime("%Y-%m-%d %H:%M:%S",time.localtime(time.time())),TAG,msg))
+
+    def read(config_file):
+        if os.path.exists(config_file):
+            config = configparser.ConfigParser()
+            config.read(config_file)
+            SystemInfo.video_opened_url = config.get('video', 'url')
+            SystemInfo.detect_step = config.getint('detectSet', 'step')
+            SystemInfo.detect_set_start_time = config.get('detectSet', 'startTime')
+            SystemInfo.detect_set_end_time = config.get('detectSet', 'endTime')
+            # SystemInfo.detect_area = [config.getint('detectSet', 'x1'), config.getint('detectSet', 'y1'),
+            #                           config.getint('detectSet', 'x2'), config.getint('detectSet', 'y2')]
+
+    def modified(config_file):
+        pass
+
+    def write(config_file):                  # 创建一个新的配置文件
+        config = configparser.ConfigParser()
+        config.add_section('video')
+        config.add_section('detectSet')
+        config.set('video', 'url', SystemInfo.video_opened_url)
+        SystemInfo.detect_step = config.getint('detectSet', 'step')
+        config.set('detectSet', 'startTime', str(SystemInfo.detect_set_start_time))
+        config.set('detectSet', 'endTime', str(SystemInfo.detect_set_end_time))
+        # config.set('detectSet', 'x1', str(SystemInfo.detect_area[0]))
+        # config.set('detectSet', 'y1', str(SystemInfo.detect_area[1]))
+        # config.set('detectSet', 'x2', str(SystemInfo.detect_area[2]))
+        # config.set('detectSet', 'y2', str(SystemInfo.detect_area[3]))
