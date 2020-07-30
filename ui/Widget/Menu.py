@@ -21,6 +21,18 @@ class Menu(MyWidget):
                                                                       SystemInfo.operate_menus[menusIndex][0].getQTreeWidgetItem())
         self.experimentExploer.expandAll()
         self.GroupBox.setLayout(self.set2FullVBoxLayout([self.experimentExploer]))
+        self.experimentExploer.clicked.connect(self.switchSet)
 
-    def setUnable(self):
-        self.GroupBox.setEnabled(False)
+    def switchSet(self, index):
+        item = self.experimentExploer.currentItem()
+        SystemInfo.main_view.setWidget.stopPaint()
+        if item.text(0) == "查看视频信息":
+            SystemInfo.main_view.setWidget.stackWidget.setCurrentWidget(SystemInfo.main_view.setWidget.videoInfo)
+            SystemInfo.main_view.setWidget.GroupBox.setTitle("查看视频信息")
+        elif item.text(0) == "视频范围":
+            SystemInfo.main_view.setWidget.stackWidget.setCurrentWidget(SystemInfo.main_view.setWidget.detectSet)
+            SystemInfo.main_view.setWidget.GroupBox.setTitle("视频范围")
+        elif item.text(0) == "标注区域":
+            SystemInfo.main_view.setWidget.startPaint()
+        elif item.text(0) == SystemInfo.operate_menus[1][3].getName():
+            SystemInfo.main_view.setWidget.startScalePaint()

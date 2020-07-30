@@ -10,29 +10,47 @@ class VideoOperate(MyWidget):
         self.videoOperateGrid = QGridLayout()
         self.GroupBox.setLayout(self.videoOperateGrid)
 
-        back = QPushButton("Back")
+        self.back = QPushButton("Back")
+        self.back.clicked.connect(self.videoBack)
 
-        self.opStart = QPushButton("开始")
-        self.opPause = QPushButton("暂停")
+        self.start = QPushButton("开始")
 
-        forward = QPushButton("forward")
+        self.pause = QPushButton("暂停")
+
+        self.forward = QPushButton("forward")
+        self.forward.clicked.connect(self.videoForward)
 
         self.nowTime = QLabel("")
+        self.nowTime.setAlignment(Qt.AlignCenter)
 
         self.totalTime = QLabel("")
+        self.totalTime.setAlignment(Qt.AlignCenter)
 
         self.timeSlide = QSlider(Qt.Horizontal)
 
         self.videoOperateGrid.addWidget(self.timeSlide, 0, 0, 1, 9)
         self.videoOperateGrid.addWidget(self.nowTime, 1, 2, 1, 1)
-        self.videoOperateGrid.addWidget(back, 1, 3, 1, 1)
-        self.videoOperateGrid.addWidget(self.opStart, 1, 4, 1, 1)
-        self.videoOperateGrid.addWidget(self.opPause, 1, 5, 1, 1)
-        self.videoOperateGrid.addWidget(forward, 1, 6, 1, 1)
+        self.videoOperateGrid.addWidget(self.back, 1, 3, 1, 1)
+        self.videoOperateGrid.addWidget(self.start, 1, 4, 1, 1)
+        self.videoOperateGrid.addWidget(self.pause, 1, 5, 1, 1)
+        self.videoOperateGrid.addWidget(self.forward, 1, 6, 1, 1)
         self.videoOperateGrid.addWidget(self.totalTime, 1, 7, 1, 1)
+
+    def videoForward(self):
+        SystemInfo.main_view.changeTime(SystemInfo.video_now_fps+5)
+
+    def videoBack(self):
+        SystemInfo.main_view.changeTime(SystemInfo.video_now_fps-5)
 
     def updateUI(self):
         self.timeSlide.setMinimum(0)
         self.timeSlide.setMaximum(SystemInfo.video_total_fps)
         self.totalTime.setText("{}:{}".format(str(int(SystemInfo.video_time / 60)).zfill(2),
                                               str(SystemInfo.video_time % 60).zfill(2)))
+    def setEnabled(self,status):
+        self.timeSlide.setEnabled(status)
+        self.back.setEnabled(status)
+        self.forward.setEnabled(status)
+        self.pause.setEnabled(status)
+        self.start.setEnabled(status)
+

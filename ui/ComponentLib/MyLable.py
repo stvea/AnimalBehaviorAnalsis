@@ -32,17 +32,17 @@ class MyLabel(QLabel):
     def mouseReleaseEvent(self, ev: QtGui.QMouseEvent) -> None:
         if self.area_start_paint:
             self.area_flag = False
-            self.area_start_paint = False
+            # self.area_start_paint = False
             SystemInfo.detect_area = self.area
-            SystemInfo.main_view.status.showMessage('绘制结束，若重新绘制请再次点击', 2000)
+            # SystemInfo.main_view.status.showMessage('绘制结束，若重新绘制请再次点击', 2000)
 
         elif self.scale_start_paint:
             self.scale_flag = False
-            self.scale_start_paint = False
+            # self.scale_start_paint = False
             SystemInfo.detect_scale = self.scale
             SystemInfo.detect_scale_label = sqrt((self.scale[0]-self.scale[2])**2+(self.scale[1]-self.scale[3])**2)
             SystemInfo.main_view.getScaleReal()
-            SystemInfo.main_view.status.showMessage('绘制结束，若重新绘制请再次点击', 2000)
+            # SystemInfo.main_view.status.showMessage('绘制结束，若重新绘制请再次点击', 2000)
 
 
     def mouseMoveEvent(self, ev: QtGui.QMouseEvent) -> None:
@@ -76,3 +76,7 @@ class MyLabel(QLabel):
     def startScalePaint(self):
         self.scale_start_paint = True
         SystemInfo.main_view.status.showMessage('开始绘制比例尺',0)
+
+    def stopPaint(self):
+        self.scale_start_paint = False
+        self.area_start_paint = False

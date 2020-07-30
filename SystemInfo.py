@@ -14,7 +14,8 @@ class SystemInfo:
 
     video_opened_url = None
     video_is_opened = False
-    video_isPlay = False
+    video_is_play = False
+    video_is_detect = False
     video_fps = 12
     video_time = 0
     video_now_fps = 0
@@ -49,5 +50,5 @@ class SystemInfo:
     operate_menus = [['视频操作', '查看视频信息'], ['检测设置', '标注区域', '视频范围','比例尺'], ['结果分析', '结果预览', '数据导出', '数据预览']]
 
     def log(TAG,msg):
-        SystemInfo.main_view.status.showMessage('"[{}] [{}] {}".format(time.strftime("%Y-%m-%d %H:%M:%S",time.localtime(time.time())),TAG,msg)',1000)
+        SystemInfo.main_view.status.showMessage("[{}] [{}] {}".format(time.strftime("%Y-%m-%d %H:%M:%S",time.localtime(time.time())),TAG,msg),1000)
         print("[{}] [{}] {}".format(time.strftime("%Y-%m-%d %H:%M:%S",time.localtime(time.time())),TAG,msg))

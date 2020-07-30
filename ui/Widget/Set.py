@@ -75,3 +75,17 @@ class Set(MyWidget):
         layout.addRow(QLabel("步长"), self.step)
 
         self.detectSet.setLayout(layout)
+
+    def startPaint(self):
+        SystemInfo.main_view.videoWidget.videoLabel.startAreaPaint()
+        SystemInfo.detect_area_flag = True
+        SystemInfo.video_label_size = [SystemInfo.main_view.videoWidget.videoLabel.size().width(),SystemInfo.main_view.videoWidget.videoLabel.size().height()]
+        SystemInfo.video_label_hint_size = [SystemInfo.main_view.videoWidget.videoLabel.sizeHint().width(),SystemInfo.main_view.videoWidget.videoLabel.sizeHint().height()]
+
+    def startScalePaint(self):
+        SystemInfo.main_view.videoWidget.videoLabel.startScalePaint()
+        SystemInfo.detect_scale_flag = True
+
+    def stopPaint(self):
+        SystemInfo.main_view.videoWidget.videoLabel.stopPaint()
+
