@@ -19,7 +19,7 @@ from ui.Widget.Project import Project
 from ui.Widget.Set import Set
 from ui.Widget.Video import Video
 from ui.Widget.VideoOperate import VideoOperate
-from sort import Sort, get_file_info
+from sort import Sort, get_detect_info
 
 
 class MainWindow(QMainWindow):
@@ -149,7 +149,7 @@ class MainWindow(QMainWindow):
         self.ProgressBar = ProgressBar("self.FileIndex", "self.VideoNum", SystemInfo.video_total_fps)
         mul_trackers = Sort(step=SystemInfo.detect_step)
         for i in range(int(SystemInfo.detect_set_start_time * SystemInfo.video_fps),
-                       int(SystemInfo.detect_set_end_time * SystemInfo.video_fps), int(SystemInfo.detect_set_step)):
+                       int(SystemInfo.detect_set_end_time * SystemInfo.video_fps) + 1, int(SystemInfo.detect_set_step)):
             SystemInfo.detect_info['detect_frame'].append(i)
             SystemInfo.video.set(cv2.CAP_PROP_POS_FRAMES, i)
             success, frame = SystemInfo.video.read()
@@ -168,7 +168,7 @@ class MainWindow(QMainWindow):
             QApplication.processEvents()  # 实时显示
         with open(info_file, 'wb') as f:
             pickle.dump(mul_trackers, f)
-        get_file_info(info_file, SystemInfo)
+        get_detect_info(info_file, SystemInfo)
         self.ProgressBar.close()  # 记得关闭进度条
         self.showMessage("提示", "检测完成！")
 
@@ -322,8 +322,7 @@ class Thread(QThread):  # 采用线程来播放视频
                 success, frame = SystemInfo.video.read()
                 if success:
                     rgbImage = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    detect_index = min(int(SystemInfo.video_now_fps / SystemInfo.detect_step) * SystemInfo.detect_step,
-                                       max_detect_pos)
+                    detect_index = int(SystemInfo.video_now_fps / SystemInfo.detect_step) * SystemInfo.detect_step
                     if detect_index in SystemInfo.detect_info['detect_frame']:
                         index = SystemInfo.detect_info['detect_frame'].index(detect_index)
                         for i in range(0, len(SystemInfo.detect_info['tag_label'][index])):

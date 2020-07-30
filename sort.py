@@ -79,7 +79,7 @@ def associate_detections_to_trackers(detections, trackers, iou_threshold=0.5):
     return matches, np.array(unmatched_detections), np.array(unmatched_trackers)
 
 
-def get_file_info(file_name, SystemInfo):
+def get_detect_info(file_name, SystemInfo):
     with open(file_name, 'rb') as fr:
         mul_tracker = pickle.load(fr)
         SystemInfo.detect_all_number = []
