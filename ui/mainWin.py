@@ -105,6 +105,7 @@ class MainWindow(QMainWindow):
         SystemInfo.detect_set_step = int(self.setWidget.step.text())
 
     def detectStart(self):
+        print(SystemInfo.detect_area, SystemInfo.detect_scale_label)
         if SystemInfo.video_opened_url is None:
             self.showMessage("提示", "还没选择视频")
             return
@@ -129,7 +130,7 @@ class MainWindow(QMainWindow):
         total_step = (SystemInfo.detect_set_end_time * SystemInfo.video_fps -
                       SystemInfo.detect_set_start_time * SystemInfo.video_fps) / SystemInfo.detect_set_step
         self.ProgressBar = ProgressBar("self.FileIndex", "self.VideoNum", SystemInfo.video_total_fps)
-        mul_trackers = Sort(step=SystemInfo.detect_step)
+        mul_trackers = Sort(max_age= SystemInfo.video_fps, step=SystemInfo.detect_step, area=np.int32(SystemInfo.detect_area))
         for i in range(int(SystemInfo.detect_set_start_time * SystemInfo.video_fps),
                        int(SystemInfo.detect_set_end_time * SystemInfo.video_fps) + 1, int(SystemInfo.detect_set_step)):
             SystemInfo.detect_info['detect_frame'].append(i)

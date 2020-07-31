@@ -84,7 +84,7 @@ def get_detect_info(file_name, SystemInfo):
         mul_tracker = pickle.load(fr)
         SystemInfo.detect_all_number = []
         for i in range(int(SystemInfo.detect_set_start_time * SystemInfo.video_fps),
-                       int(SystemInfo.detect_set_end_time * SystemInfo.video_fps), int(SystemInfo.detect_set_step)):
+                       int(SystemInfo.detect_set_end_time * SystemInfo.video_fps) + 1, int(SystemInfo.detect_set_step)):
             SystemInfo.detect_info['detect_frame'].append(i)
             number, orientation, tag_center = [], [], []
             for tracker in mul_tracker.trackers:
@@ -99,7 +99,7 @@ def get_detect_info(file_name, SystemInfo):
 
 
 class Sort(object):
-    def __init__(self, max_age=50, min_hits=1, step=1):
+    def __init__(self, max_age=50, min_hits=1, step=1, area=[]):
         self.max_age = max_age
         self.min_hits = min_hits
         self.trackers = []
@@ -108,9 +108,10 @@ class Sort(object):
         self.numbers = []
         self.history = defaultdict(list)
         self.step = step
+        self.area = area
 
     def update(self, frame):
-        numbers, orientation, corners, tag_center, unrecognized = simple_locate(frame)
+        numbers, orientation, corners, tag_center, unrecognized = simple_locate(frame, area=self.area)
         for tracker in self.trackers:
             tracker.predict()
         for i, number in enumerate(numbers):

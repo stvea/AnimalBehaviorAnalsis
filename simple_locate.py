@@ -9,8 +9,8 @@ from collections import defaultdict
 
 # area = [x1, y1, x2, y2]
 def simple_locate(im, filter_size=23, filter_threshold=1, tag_list=[], track_mode=0, area=[], visual=False):
-    if area:
-        assert len(area) == 4, 'area must have four positional parameters'
+    if len(area) ==4:
+        # assert len(area) == 4, 'area must have four positional parameters'
         im = im[area[1]:area[3], area[0]:area[2]]
     gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
     bw = cv2.adaptiveThreshold(gray, 1, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, filter_size,
@@ -85,11 +85,11 @@ def simple_locate(im, filter_size=23, filter_threshold=1, tag_list=[], track_mod
             else:
                 unrecognized_corners['corner'].append(corner)
                 unrecognized_corners['code'].append(code)
-    if area:
+    if len(area) == 4:
         for corner in corners:
             corner += area[:2]
         tag_center = [x + area[:2] for x in tag_center]
-        for unrecognized in unrecognized_corners:
+        for unrecognized in unrecognized_corners['corner']:
             unrecognized += area[:2]
     if visual:
         cv2.namedWindow('bumblebee', 0)
